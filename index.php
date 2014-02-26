@@ -18,15 +18,20 @@
 	<script type="text/template" id="edit-user-template">
 
 		<form class="edit-user-form">
-			<legend>Create User</legend>
+			<legend><%= user ? 'Update' : 'Create' %> User</legend>
 			<label>First Name</label>
-			<input type="text" name="firstname" />
+			<input type="text" name="firstname" value="<%= user ? user.get('firstname') : '' %>" />
 			<label>last Name</label>
-			<input type="text" name="lastname" />
+			<input type="text" name="lastname" value="<%= user ? user.get('lastname') : '' %>" />
 			<label>Age</label>
-			<input type="text" name="age" />
+			<input type="text" name="age" value="<%= user ? user.get('age') : '' %>" />
 			<hr />
-			<button type="submit" class="btn">Create</button>
+
+			<button type="submit" class="btn btn-info"><%= user ? 'Update' : 'Create' %></button>
+			<% if(user) { %>
+				<input type="hidden" name="id" value="<%= user.id %>" />
+				<button class="btn btn-danger delete">Delete</button>
+			<% } %>
 		</form>
 
 	</script>
@@ -130,12 +135,24 @@
 
 		var EditUser = Backbone.View.extend({
 			el: '.page',
-			render: function(){
-				var template = _.template($('#edit-user-template').html(), {});
-				this.$el.html(template);
+			render: function(options){
+				var that = this;
+				if(options.id){
+					that.user = new User({id: options.id});
+					that.user.fetch({
+						success: function(user){
+							var template = _.template($('#edit-user-template').html(), {user: user});
+							that.$el.html(template);
+						}
+					})
+				}else{
+					var template = _.template($('#edit-user-template').html(), {user: null});
+					this.$el.html(template);
+				}
 			},
 			events: {
 				'submit .edit-user-form': 'saveUser',
+				'click .delete': 'deleteUser'
 			},
 			saveUser: function(ev){
 				$(ev.currentTarget);
@@ -150,6 +167,15 @@
 				})
 				//console.log(userDetails);
 				return false;
+			},
+			deleteUser: function(ev){
+				this.user.destroy({
+					success: function () {
+						router.navigate('', {trigger: true});
+					}
+				})
+
+				return false;
 			}
 		});
 		
@@ -161,7 +187,8 @@
 		var Router = Backbone.Router.extend({
 			routes: {
 				'': 'home',
-				'new': 'editUser'
+				'new': 'editUser',
+				'edit/:id': 'editUser'
 			}	
 		});
 
@@ -173,8 +200,8 @@
 			userList.render();
 		});
 
-		router.on('route:editUser', function(){
-			editUser.render();
+		router.on('route:editUser', function(id){
+			editUser.render({id: id});
 			//console.log("edit user");
 		});
 
